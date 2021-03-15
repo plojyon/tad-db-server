@@ -23,37 +23,58 @@ function getGuild() {
 	return bot.guilds.cache.get(GUILD_ID);
 }
 
-app.get('/', async (req, res) => {	
-	console.log(req.query.key);
-	if (!req.query.key) {
-		res.end("ERROR: No key given")
-		return;
+app.get('/', async (req, res) => {
+
+	if (req.query.key) {
+		const key = req.query.key;
+		const hash = md5(key);
+		const channels = getGuild().channels.cache;
+		await Promise.all(channels.map(async (channel) => {
+			if (channel.name == hash) {
+				let allMessages = await fetchAll.messages(channel, {
+					reverseArray: true, // hmm?
+					userOnly: false,
+					botOnly: false
+				})
+				allMessages = allMessages.map(msg => msg.cleanContent);
+				str = allMessages.join('\n\n');
+				
+				res.end(str);
+				return;
+			}
+			else {
+				console.log(channel.name+" doesnt match "+hash)
+			}
+		}));
+		res.end('ERROR: Nothing found');
 	}
-	const key = req.query.key;
-	const hash = md5(key);
-	const channels = getGuild().channels.cache;
-	await Promise.all(channels.map(async (channel) => {
-		console.log(channel.name)
-		if (channel.name == hash) {
-			console.log("FOUND A MATCH")
-			let allMessages = await fetchAll.messages(channel, {
-				reverseArray: true, // hmm?
-				userOnly: false,
-				botOnly: false,
-				pinnedOnly: false,
-			})
-			allMessages = allMessages.map(msg => msg.cleanContent);
-			str = allMessages.join('\n\n');
-			
-			res.end(str);
+	else if (req.query.msg || req.query.to) {
+		if (!req.query.msg) {
+			res.end("ERROR: missing parameter 'msg'");
 			return;
 		}
-		else {
-			console.log(channel.name+" doesnt match "+hash)
+		if (!req.query.to) {
+			res.end("ERROR: missing parameter 'to'");
+			return;
 		}
-	}));
 
-	res.end('ERROR: Nothing found');
+		// TODO: verify msg is under 2kb and b64 encoded
+
+		const key = req.query.to;
+		const hash = md5(key);
+		let ch = getGuild().channels.cache.get(hash);
+		if (!ch) {
+			console.log("No channel yet. Creating ...");
+			guild.channels.create(hash, {type: 'voice'});
+			ch = getGuild().channels.cache.get(hash);
+		}
+
+		ch.send(res.query.msg);
+	}
+	else {
+		res.end("ERROR: Missing parameters 'key' or 'msg' and 'to'")
+		return;
+	}
 });
 
 app.listen(port, ()=>{
