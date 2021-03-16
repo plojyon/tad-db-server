@@ -86,6 +86,7 @@ app.get('/', async (req, res) => {
 		}
 
 		ch.send(req.query.msg);
+		res.end();
 	}
 	else {
 		res.end("ERROR: Missing parameters 'key' or 'msg' and 'to'")
