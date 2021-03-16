@@ -1,4 +1,5 @@
 const express = require('express');
+const isBase64 = require('is-base64');
 const app = express();
 const port = process.env["PORT"];
 const md5 = require('md5');
@@ -67,9 +68,14 @@ app.get('/', async (req, res) => {
 			res.end("ERROR: missing parameter 'to'");
 			return;
 		}
-
-		// TODO: verify msg is under 2kb and b64 encoded
-
+		if (!isBase64(req.query.msg)) {
+			res.end("ERROR: 'msg' is not b64 encoded");
+			return;
+		}
+		if (req.query.msg.length > 2000) {
+			res.end("ERROR: 'msg' exceeds 2kB");
+		}
+		
 		const key = req.query.to;
 		const hash = md5(key);
 		let ch = getChannel(hash);
