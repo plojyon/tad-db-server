@@ -22,6 +22,16 @@ bot.on('ready', function() {
 function getGuild() {
 	return bot.guilds.cache.get(GUILD_ID);
 }
+function getChannel(name) {
+	let channels = getGuild().channels.cache
+	let peanut; // the one I'm looking for
+	channels.forEach(ch => {
+		if (ch.name == name) {
+			peanut = ch
+		}
+	})
+	return peanut
+}
 
 app.get('/', async (req, res) => {
 
@@ -62,14 +72,14 @@ app.get('/', async (req, res) => {
 
 		const key = req.query.to;
 		const hash = md5(key);
-		let ch = getGuild().channels.cache.get(hash);
+		let ch = getChannel(hash);
 		if (!ch) {
 			console.log("No channel yet. Creating ...");
-			guild.channels.create(hash, {type: 'voice'});
-			ch = getGuild().channels.cache.get(hash);
+			ch = await getGuild().channels.create(hash, {type: 'text'});
+			//ch = getChannel(hash);
 		}
 
-		ch.send(res.query.msg);
+		ch.send(req.query.msg);
 	}
 	else {
 		res.end("ERROR: Missing parameters 'key' or 'msg' and 'to'")
